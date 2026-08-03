@@ -1,0 +1,19 @@
+services:
+  assessment:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: backend
+    container_name: 360-assessment
+    ports:
+      - "5176:5176"
+    volumes:
+      - ./data:/app/data
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/assessment.db
+      - PORT=5176
+      - JWT_SECRET=your-secret-key-change-this-in-production
+    restart: unless-stopped

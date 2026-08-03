@@ -1,0 +1,146 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String   @unique
+  password    String
+  name        String
+  department  String?
+  position    String?
+  role        String   @default("member") // admin, member
+  status      String   @default("active") // active, inactive
+  createTime  DateTime @default(now())
+  updateTime  DateTime @updatedAt
+
+  // 关联
+  createdProjects     AssessmentProject[] @relation("ProjectCreator")
+  projectMembers      ProjectMember[]
+  assessorTasks       AssessmentTask[]    @relation("AssessorTasks")
+  targetTasks         AssessmentTask[]    @relation("TargetTasks")
+}
+
+// 评估项目表
+model AssessmentProject {
+  id              Int      @id @default(autoincrement())
+  projectNo       String   @unique
+  name            String
+  description     String?
+  templateId      Int?
+  status          String   @default("draft") // draft, active, completed
+  createdBy       Int
+  createTime      DateTime @default(now())
+  updateTime      DateTime @updatedAt
+
+  // 关联
+  creator         User     @relation("ProjectCreator", fields: [createdBy], references: [id])
+  template        QuestionnaireTemplate? @relation(fields: [templateId], references: [id])
+  members         ProjectMember[]
+  tasks           AssessmentTask[]
+}
+
+// 项目成员表
+model ProjectMember {
+  id          Int      @id @default(autoincrement())
+  projectId   Int
+  userId      Int
+  submitted   Boolean  @default(false) // 是否已提交评估
+  submitTime  DateTime? // 提交时间
+  createTime  DateTime @default(now())
+
+  // 关联
+  project     AssessmentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([projectId, userId])
+}
+
+// 评估任务表
+model AssessmentTask {
+  id              Int      @id @default(autoincrement())
+  projectId       Int
+  assessorId      Int      // 评估者
+  targetUserId    Int      // 被评估者
+  status          String   @default("pending") // pending, in_progress, completed
+  startTime       DateTime?
+  endTime         DateTime?
+  createTime      DateTime @default(now())
+  updateTime      DateTime @updatedAt
+
+  // 关联
+  project         AssessmentProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assessor        User     @relation("AssessorTasks", fields: [assessorId], references: [id])
+  targetUser      User     @relation("TargetTasks", fields: [targetUserId], references: [id])
+  answers         Answer[]
+
+  @@unique([projectId, assessorId, targetUserId])
+}
+
+// 问卷模板表
+model QuestionnaireTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  isDefault   Boolean  @default(false)
+  createTime  DateTime @default(now())
+  updateTime  DateTime @updatedAt
+
+  // 关联
+  projects    AssessmentProject[]
+  dimensions  Dimension[]
+}
+
+// 评估维度表
+model Dimension {
+  id              Int      @id @default(autoincrement())
+  name            String
+  description     String?
+  weight          Float    @default(1.0)
+  templateId      Int
+  sortOrder       Int      @default(0)
+  createTime      DateTime @default(now())
+  updateTime      DateTime @updatedAt
+
+  // 关联
+  template        QuestionnaireTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  questions       Question[]
+}
+
+// 评估题目表
+model Question {
+  id              Int      @id @default(autoincrement())
+  content         String
+  type            String   @default("rating") // rating, text
+  dimensionId     Int
+  sortOrder       Int      @default(0)
+  createTime      DateTime @default(now())
+  updateTime      DateTime @updatedAt
+
+  // 关联
+  dimension       Dimension @relation(fields: [dimensionId], references: [id], onDelete: Cascade)
+  answers         Answer[]
+}
+
+// 答案表
+model Answer {
+  id              Int      @id @default(autoincrement())
+  taskId          Int
+  questionId      Int
+  ratingValue     Int?     // 评分值（1-5）
+  textValue       String?  // 文本答案
+  createTime      DateTime @default(now())
+  updateTime      DateTime @updatedAt
+
+  // 关联
+  task            AssessmentTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  question        Question @relation(fields: [questionId], references: [id])
+
+  @@unique([taskId, questionId])
+}
