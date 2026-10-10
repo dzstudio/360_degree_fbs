@@ -109,7 +109,7 @@ cd /var/data/360_degree_fbs
 git clone https://github.com/dzstudio/360_degree_fbs.git .
 ```
 
-**Step 2 — ⚠️ 必须修改 JWT_SECRET**
+**Step 2 — 修改 JWT_SECRET**
 
 `JWT_SECRET` 是用于签发和校验登录令牌的签名密钥。**仓库里带的是一个公开的占位符值，直接部署等于鉴权形同虚设** —— 任何看到本仓库的人都能用它伪造出管理员令牌，登录后台。
 
@@ -125,12 +125,6 @@ openssl rand -base64 48
 environment:
   - JWT_SECRET=你刚生成的随机字符串
 ```
-
-> **关于 `git pull` 冲突**：`docker-compose.yml` 是纳入版本控制的文件，直接修改会导致后续 `rebuild.sh` 里的 `git pull` 报冲突。若不希望这个本地改动被 git 跟踪，可执行：
-> ```bash
-> git update-index --skip-worktree docker-compose.yml
-> ```
-> 需要恢复跟踪时用 `git update-index --no-skip-worktree docker-compose.yml`。
 
 > **关于已登录用户**：修改密钥后，所有此前签发的令牌会立即失效，用户需要重新登录。
 
